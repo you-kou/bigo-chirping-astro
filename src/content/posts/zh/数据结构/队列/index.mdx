@@ -1,0 +1,119 @@
+---
+title: 队列
+description: '队列是先进先出的数据结构，只能在队尾插入元素、队头删除元素，先进入的数据会优先被取出。'
+pubDate: '1968-01-01 00:05:01'
+tags: [线性数据结构]
+categories: [数据结构]
+heroImage: './define-queue.jpg'
+heroImageAlt: '队列数据结构，以现实排队场景类比队列，遵循先进先出规则。'
+---
+
+import { Image } from 'astro:assets';
+import DequeueOperationInQueueImg from './Dequeue-Operation-in-Queue.webp';
+
+如果说栈是“后进先出（LIFO）”，那么 **队列（Queue）** 的规则完全相反，它是：**先进先出（FIFO, First In, First Out）**。
+
+生活中的典型例子就是**排队**：
+
+- 先来排队的人，先办理业务离开；
+- 后来的人只能站在队尾等待。
+
+## 队列的核心概念
+
+队列就像一条双向开口的管道，两端分工明确：
+
+- **队头（Front / Head）：** 允许进行**删除**（出队）的一端。
+- **队尾（Rear / Tail）：** 允许进行**插入**（入队）的一端。
+
+## 核心操作
+
+| **操作**     | **英文**           | **说明**                         |
+| ------------ | ------------------ | -------------------------------- |
+| **入队**     | `Enqueue` / `Push` | 将新元素添加至**队尾**。         |
+| **出队**     | `Dequeue` / `Pop`  | 将**队头**元素移除并返回。       |
+| **查看队头** | `Peek` / `Front`   | 获取队头元素的值，但**不出队**。 |
+| **判空**     | `IsEmpty`          | 检查队列中是否有元素。           |
+
+<figure>
+  <Image
+    src={DequeueOperationInQueueImg}
+    alt="队列入队与出队操作图解"
+    widths={[400, 800, 1200]}
+  />
+  <figcaption>队列的基本操作，从队头执行出队删除元素，向队尾执行入队添加元素，遵循先进先出</figcaption>
+</figure>
+
+## 常见变体与实现方式
+
+在实际应用中，普通队列存在“假溢出”问题（即数组前面有空位，但队尾已满）。为了解决这个问题或适应不同场景，演化出了几种变体：
+
+### 循环队列（Circular Queue）
+
+把数组的首尾相连形成一个环。这是顺序结构实现队列最常用的方式，极大地提高了空间利用率。
+
+### 双端队列（Deque, Double-Ended Queue）
+
+两端（队头和队尾）都可以自由地进行入队和出队操作。
+
+### 优先队列（Priority Queue）
+
+元素的出队顺序不再取决于入队时间，而是由元素的**优先级**决定（通常基于“堆”这种数据结构实现）。
+
+## 代码示例（顺序循环队列）
+
+```c
+#include <stdio.h>
+#include <stdbool.h>
+
+#define MAX_SIZE 5
+
+typedef struct {
+    int data[MAX_SIZE];
+    int front; // 指向队头
+    int rear;  // 指向队尾的下一个位置
+} Queue;
+
+void init(Queue *q) {
+    q->front = 0;
+    q->rear = 0;
+}
+
+// 入队 (Enqueue)
+bool enqueue(Queue *q, int val) {
+    if ((q->rear + 1) % MAX_SIZE == q->front) return false; // 队满
+    q->data[q->rear] = val;
+    q->rear = (q->rear + 1) % MAX_SIZE; // 取模实现循环
+    return true;
+}
+
+// 出队 (Dequeue)
+bool dequeue(Queue *q, int *val) {
+    if (q->front == q->rear) return false; // 队空
+    *val = q->data[q->front];
+    q->front = (q->front + 1) % MAX_SIZE; // 取模实现循环
+    return true;
+}
+
+int main() {
+    Queue q;
+    init(&q);
+
+    enqueue(&q, 100);
+    enqueue(&q, 200);
+
+    int val;
+    dequeue(&q, &val); // val = 100 (先入先出)
+    printf("出队元素: %d\n", val);
+
+    return 0;
+}
+```
+
+## 队列的实际应用场景
+
+任何需要**按顺序排队处理资源**的场景，底层都离不开队列：
+
+- **操作系统任务调度：** CPU 在处理多线程或进程时，会按先后顺序将任务放入就绪队列。
+- **网络数据包缓冲：** 路由器收到数据包后，放入队列中依次转发。
+- **消息队列（Message Queue）：** 如 RabbitMQ、Kafka，用于分布式系统中异步解耦和流量削峰。
+- **广度优先搜索算法（BFS）：** 在图或树的遍历中，利用队列记录下一层需要访问的节点。
