@@ -1,0 +1,159 @@
+---
+title: 二叉树的遍历
+description: 二叉树遍历是按特定规则访问树中每一个节点且仅访问一次的操作，常见有前序、中序、后序、层序四种方式，前三种以根节点访问顺序区分，层序按从上到下逐层访问，遍历是二叉树查找、修改、输出等运算的基础。
+pubDate: '1968-01-01 00:07:02'
+tags: []
+categories: [数据结构]
+heroImage: './Tree Traversal.webp'
+heroImageAlt: '数据结构概念插画，左侧为普通二叉树，中间为平衡二叉树，右侧代表循环迭代处理逻辑'
+---
+
+import { Image } from 'astro:assets';
+import PreOrderImg from './preorder.png';
+import InOrderImg from './inorder.png';
+import PostOrderImg from './post-order.png';
+import LevelOrderImg from './level-order.png';
+
+**树的遍历（Tree Traversal）** 是指按照某种特定的顺序，访问树中所有的节点，且**每个节点恰好被访问一次**。
+
+在二叉树中，遍历算法主要分为两大类：
+1. **深度优先遍历（DFS）**：沿着树的深度遍历节点，尽可能深地搜索树的分支。分为**前序**、**中序**和**后序**。
+2. **广度优先遍历（BFS）**：按层级由近及远地探索节点。即**层序遍历**。
+
+## 数据结构定义
+
+在 C++ 中，二叉树使用结构体配合指针来实现：
+
+```c++
+#include <iostream>
+
+// 定义二叉树节点
+struct TreeNode {
+    int val;            // 节点存放的数据
+    TreeNode* left;     // 指向左子节点的指针
+    TreeNode* right;    // 指向右子节点的指针
+
+    // 构造函数：初始化节点值，左右指针默认为空
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+};
+```
+
+## 前序遍历
+
+前序遍历（Pre-order Traversal）遵循 **“根节点 $\rightarrow$ 左子树 $\rightarrow$ 右子树”** 的顺序。每到一个节点，**先立即访问当前节点**，然后再递归地进入左子树，待左子树完全遍历结束后，最后进入右子树。
+
+<figure>
+  <Image
+    src={PreOrderImg}
+    alt="二叉树前序遍历手绘示意图，红色箭头标注访问顺序，输出序列：1→2→4→5→3→6→7"
+    widths={[400, 800, 1200]}
+  />
+  <figcaption>二叉树前序遍历示意图，遵循根‑左‑右的访问规则，红色箭头表示节点访问次序，遍历结果序列为 1→2→4→5→3→6→7</figcaption>
+</figure>
+
+**参考代码**
+
+```c++
+// 前序遍历（递归版）
+void preOrder(TreeNode* root) {
+    if (root == nullptr) return; // 1. 递归出口：到达空节点
+
+    std::cout << root->val << " "; // 2. 访问当前根节点
+    preOrder(root->left);          // 3. 递归遍历左子树
+    preOrder(root->right);         // 4. 递归遍历右子树
+}
+```
+
+## 中序遍历
+
+中序遍历（In-order Traversal）遵循 **“左子树 $\rightarrow$ 根节点 $\rightarrow$ 右子树”** 的顺序。一路向左深入，直到找不到左子节点为止；然后**访问当前节点**；最后进入当前节点的右子树。
+
+<figure>
+  <Image
+    src={InOrderImg}
+    alt="二叉树中序遍历手绘示意图，红色箭头标记访问顺序，遍历输出序列：4→2→5→1→6→3→7"
+    widths={[400, 800, 1200]}
+  />
+  <figcaption>二叉树中序遍历示意图，遵循左‑根‑右的访问规则，红色箭头表示节点访问次序，遍历结果序列为 4→2→5→1→6→3→7</figcaption>
+</figure>
+
+**参考代码**
+
+```c++
+// 中序遍历（递归版）
+void inOrder(TreeNode* root) {
+    if (root == nullptr) return; // 1. 递归出口
+
+    inOrder(root->left);           // 2. 递归遍历左子树
+    std::cout << root->val << " "; // 3. 访问当前根节点
+    inOrder(root->right);          // 4. 递归遍历右子树
+}
+```
+
+## 后序遍历
+
+后序遍历（Post-order Traversal）遵循 **“左子树 $\rightarrow$ 右子树 $\rightarrow$ 根节点”** 的顺序。只有当当前节点的**左子树和右子树都完全处理完毕后**，才会访问当前节点本身。
+
+<figure>
+  <Image
+    src={PostOrderImg}
+    alt="二叉树后序遍历手绘示意图，红色箭头标注访问顺序，遍历输出序列：4→5→2→6→7→3→1"
+    widths={[400, 800, 1200]}
+  />
+  <figcaption>二叉树后序遍历示意图，遵循左‑右‑根的访问规则，红色箭头表示节点访问次序，遍历结果序列为 4→5→2→6→7→3→1</figcaption>
+</figure>
+
+**参考代码**
+
+```c++
+// 后序遍历（递归版）
+void postOrder(TreeNode* root) {
+    if (root == nullptr) return; // 1. 递归出口
+
+    postOrder(root->left);         // 2. 递归遍历左子树
+    postOrder(root->right);        // 3. 递归遍历右子树
+    std::cout << root->val << " "; // 4. 访问当前根节点
+}
+```
+
+## 层序遍历
+
+层序遍历（Level-order Traversal / BFS）属于广度优先搜索（BFS），遵循 **“从上到下，从左到右”** 按层逐个访问节点的顺序。借助 **队列（`std::queue`）** 的“先进先出（FIFO）”特性。先把根节点入队，随后循环弹出队首元素并访问，同时将其非空的左右子节点顺次推入队列中。
+
+<figure>
+  <Image
+    src={LevelOrderImg}
+    alt="二叉树层序遍历手绘示意图，红色箭头标记逐层访问顺序，遍历输出序列：1→2→3→4→5→6→7"
+    widths={[400, 800, 1200]}
+  />
+  <figcaption>二叉树层序遍历示意图，按照从上到下、同一层从左到右的规则访问节点，红色箭头表示节点访问次序，遍历结果序列为 1→2→3→4→5→6→7</figcaption>
+</figure>
+
+**参考代码**
+
+```c++
+#include <queue>
+
+// 层序遍历（借助队列实现）
+void levelOrder(TreeNode* root) {
+    if (root == nullptr) return; // 树为空直接返回
+
+    std::queue<TreeNode*> q;     // 创建辅助队列
+    q.push(root);                // 1. 将根节点入队
+
+    while (!q.empty()) {
+        TreeNode* curr = q.front(); // 获取队首节点
+        q.pop();                    // 弹出队首节点
+
+        std::cout << curr->val << " "; // 2. 访问当前节点
+
+        // 3. 将左右孩子依次推入队列，等待后续按层处理
+        if (curr->left != nullptr) {
+            q.push(curr->left);
+        }
+        if (curr->right != nullptr) {
+            q.push(curr->right);
+        }
+    }
+}
+```
