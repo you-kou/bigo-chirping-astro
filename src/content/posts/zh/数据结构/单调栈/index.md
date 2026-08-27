@@ -1,7 +1,7 @@
 ---
 title: 单调栈
 description: '单调栈是栈内元素保持单调递增或单调递减的特殊栈，在入栈时会弹出破坏单调性的元素，常用来快速求解区间最值类问题。'
-pubDate: '1968-01-01 00:04:02'
+pubDate: '1968-01-01 04:02:01'
 tags: []
 categories: [数据结构]
 heroImage: './monotonic-stack-in-one-stupid-picture.webp'
