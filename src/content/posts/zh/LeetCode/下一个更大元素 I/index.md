@@ -1,9 +1,9 @@
 ---
 title: 下一个更大元素 I
 description: '给定两个无重复元素的数组 nums1 和 nums2（其中 nums1 是 nums2 的子集），要求找出 nums1 中每个元素在 nums2 中对应位置右侧的第一个比它大的数，并以数组形式返回。'
-pubDate: 2017-02-12
+pubDate: '2015-08-05 00:08:16'
 tags: [单调栈, 哈希表]
-categories: [题库]
+categories: [LeetCode]
 heroImage: './Next-Greater-Element-I.png'
 heroImageAlt: 'LeetCode 496 下一个更大元素 I 的算法逻辑演示图，展示了遍历数组 nums2 并填充结果数组的过程'
 ---
