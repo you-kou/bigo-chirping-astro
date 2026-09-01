@@ -1,0 +1,179 @@
+---
+title: '图的深度优先搜索'
+description: '图的深度优先搜索（DFS）从起始顶点出发，沿着一条路径尽可能向下访问，走到尽头再回溯，遍历未访问过的邻接顶点，借助栈或递归实现，可遍历图中连通分量，能用于找路径、判断连通性。'
+pubDate: 1968-01-01 06:01:03
+tags: [图]
+categories: [数据结构, 图搜索]
+heroImage: './DFS 遍历概念插画.png'
+heroImageAlt: '深度优先搜索（DFS）：遍历时优先一路向最深节点访问，走到尽头后回溯，再访问其余分支。'
+---
+
+import { Image } from 'astro:assets';
+import DfsStackImg from './图与栈状态.png';
+import DfsStepsImg from './深度优先搜索的一般流程.png';
+
+**图的深度优先搜索（Depth-First Search，简称 DFS）** 是一种用于遍历或搜索[图](/posts/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/%E5%9B%BE/)（Graph）结构的经典算法。
+
+DFS 的核心思想是 **“不撞南墙不回头”**：从起始顶点出发，沿着某一条路径不断向下深入探索，直到无法继续前进（到达没有未访问邻居的顶点）为止；随后 **回溯（Backtrack）** 到上一个顶点，继续尝试探索其他尚未访问的路径，直到图中所有可达顶点都被访问完毕。
+
+## 核心概念
+
+理解 DFS 需要掌握以下几个支撑其运行机制的核心构件：
+
+<figure>
+  <Image src={DfsStackImg} alt="无向图深度优先搜索 DFS 演示图" widths={[400, 800, 1200]}/>
+  <figcaption>基于栈实现的图遍历算法，栈保存待访问节点，`ORDER OF DISCOVERY`记录节点被首次访问的先后次序。</figcaption>
+</figure>
+
+* **已访问集（Visited Set）**：图结构可能包含环。为防止无限循环或重复处理，必须维护一个状态数组/集合记录已访问过的节点。
+* **回溯机制（Backtracking）**：当遇到死胡同（无未访问的邻近节点）时，算法撤退回上一级节点，寻找未探索的邻接分支。
+* **后进先出栈（LIFO Stack）**：DFS 依赖栈结构追踪探索路径。递归实现隐式利用系统函数调用栈，迭代实现则需手动维护显式 `std::stack`。
+* **DFS 树/森林（DFS Tree/Forest）**：遍历过程中经过的节点与边会自然构成一棵 DFS 生成树；若图由多个不连通的分量组成，则构成 DFS 森林。
+
+## 工作机制
+
+1. **起点初始化**：选择起始顶点，将其标记为已访问。
+2. **深入探索**：检查当前节点是否有未访问的邻接节点：
+    * **有**：移动至该邻接节点并标记，重复此过程深入。
+    * **无**：回溯至上一级节点，继续检查其是否存在其他未访问邻居。
+3. **分量处理与终止**：从起点可达的所有节点探索完毕后，若图中仍存在未访问节点（非连通图），则以未访问节点作为新起点重新开始 DFS。
+
+<figure>
+  <Image src={DfsStepsImg} alt="DFS 深度优先搜索二叉树分步演示" widths={[400, 800, 1200]}/>
+  <figcaption>深度优先搜索（DFS）树遍历过程：优先沿着一条分支尽可能向下访问，回溯后再访问其余分支，完整遍历序列为 $1 \to 2 \to 4 \to 5 \to 3$。</figcaption>
+</figure>
+
+## 算法实现
+
+在 C++ 中，通常使用 `std::vector<bool>` 来记录节点访问状态，并使用 `std::vector<std::vector<int>>`（即邻接表）来存储图结构。
+
+### 递归实现（最常用）
+
+递归利用了系统的**函数调用栈**，代码最为简洁直观。
+
+```c++
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+// 递归 DFS 函数
+void dfsRecursive(int u, const vector<vector<int>>& adj, vector<bool>& visited) {
+    // 标记当前节点为已访问
+    visited[u] = true;
+    cout << u << " "; // 处理当前节点
+
+    // 遍历当前节点的所有邻居
+    for (int v : adj[u]) {
+        if (!visited[v]) {
+            dfsRecursive(v, adj, visited);
+        }
+    }
+}
+
+int main() {
+    int numVertices = 6;
+    // 邻接表构建图 (0 到 5)
+    vector<vector<int>> adj(numVertices);
+
+    // 添加边 (有向图示例)
+    adj[0] = {1, 2}; // 0 -> 1, 0 -> 2
+    adj[1] = {3, 4}; // 1 -> 3, 1 -> 4
+    adj[2] = {5};    // 2 -> 5
+    adj[3] = {};
+    adj[4] = {5};    // 4 -> 5
+    adj[5] = {};
+
+    vector<bool> visited(numVertices, false);
+
+    cout << "DFS 遍历顺序 (递归): ";
+    dfsRecursive(0, adj, visited);
+    cout << endl;
+
+    return 0;
+}
+```
+
+### 迭代实现（显式使用 `std::stack`）
+
+如果图的层数极深，递归可能会导致**栈溢出（Stack Overflow）**。此时可以显式使用标准库的 `std::stack` 来实现非递归版本。
+
+```c++
+#include <iostream>
+#include <vector>
+#include <stack>
+
+using namespace std;
+
+// 迭代 DFS 函数
+void dfsIterative(int start, const vector<vector<int>>& adj, int numVertices) {
+    vector<bool> visited(numVertices, false);
+    stack<int> s;
+
+    // 将起始节点压入栈中
+    s.push(start);
+
+    while (!s.empty()) {
+        int u = s.top();
+        s.pop();
+
+        if (!visited[u]) {
+            visited[u] = true;
+            cout << u << " ";
+
+            // 将未访问的邻居节点压入栈中
+            // （反向遍历可保证与递归顺序一致，正向压栈也是正确的 DFS 顺序）
+            for (auto it = adj[u].rbegin(); it != adj[u].rend(); ++it) {
+                if (!visited[*it]) {
+                    s.push(*it);
+                }
+            }
+        }
+    }
+}
+
+int main() {
+    int numVertices = 6;
+    vector<vector<int>> adj(numVertices);
+
+    adj[0] = {1, 2};
+    adj[1] = {3, 4};
+    adj[2] = {5};
+    adj[3] = {};
+    adj[4] = {5};
+    adj[5] = {};
+
+    cout << "DFS 遍历顺序 (非递归/显式栈): ";
+    dfsIterative(0, adj, numVertices);
+    cout << endl;
+
+    return 0;
+}
+```
+
+### 非连通图的完整遍历
+
+若图可能包含多个**孤立连通块**（即从节点 `0` 出发无法到达所有节点），需在外层循环遍历所有节点：
+
+```c++
+vector<bool> visited(numVertices, false);
+for (int i = 0; i < numVertices; ++i) {
+    if (!visited[i]) {
+        dfsRecursive(i, adj, visited);
+    }
+}
+```
+
+## 算法复杂度
+
+| **指标**       | **邻接表表示** | **邻接矩阵表示** | **说明**                                                     |
+| -------------- | -------------- | ---------------- | ------------------------------------------------------------ |
+| **时间复杂度** | $O(V + E)$     | $O(V^2)$         | $V$ 为顶点数，$E$ 为边数。邻接表下每个顶点访问一次，每条边检查一次。 |
+| **空间复杂度** | $O(V)$         | $O(V)$           | 空间开销取决于 `visited` 数组大小及栈的最大深度（最坏退化为链表时为 $O(V)$）。 |
+
+## 主要应用场景
+
+- **拓扑排序（Topological Sort）**：解决有向无环图（DAG）中的依赖关系排序问题（如编译依赖、课程安排）。
+- **连通性判断与连通分量**：求解无向图的连通分量或有向图强连通分量（如 Tarjan 算法、Kosaraju 算法）。
+- **环检测（Cycle Detection）**：在图遍历过程中，若遇到正在递归栈中的节点，则说明图中存在环。
+- **路径寻找与迷宫问题**：求解从起点到终点是否存在可行路径或枚举所有可能路径。
