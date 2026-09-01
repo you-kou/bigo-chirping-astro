@@ -1,0 +1,117 @@
+---
+title: '查找 s-t 路径'
+description: '给定图中起点 s 与终点 t，判断是否存在一条从顶点 s 到顶点 t 的路径，通常可用深度优先搜索或广度优先搜索求解，有路径则 t 从 s 可达，否则不可达。'
+pubDate: 1956-08-14 01:01:01
+tags: [图搜索]
+categories: [基础算法, 单源单汇路径问题]
+heroImage: './reachability_problem.webp'
+heroImageAlt: ''
+---
+
+import Callout from '../../../../../components/Callout.astro';
+
+<Callout type="info" title="问题描述">
+  给定一个图 $G=(V, E)$ 以及图中的两个指定节点 $s$（源节点）和 $t$（目标节点），判断是否存在一条从 $s$ 指向 $t$ 的有效路径。
+</Callout>
+
+## 问题分类与性质
+
+根据图的类型不同，$s$-$t$ 可达性问题在性质和解法上有所差异：
+
+- **有向图可达性（Directed Reachability）**：由于边具有方向性，从 $s$ 能到达 $t$ **并不意味着**从 $t$ 能到达 $s$。这是最典型的 $s$-$t$ 可达性形态。
+- **无向图可达性 / 连通性（Undirected Reachability / Connectivity）**：由于边是双向的，问题等价于判断 $s$ 和 $t$ 是否属于**同一个连通分量**。
+
+## 核心求解算法
+
+根据具体应用场景对空间、时间或图规模的需求，通常有以下几类主流算法：
+
+### 基础图搜索算法（最常用）
+
+- **深度优先搜索（DFS）**：从 $s$ 出发沿单条路径纵向深入，配合 `visited` 集合标记已访问节点。适合判断路径是否存在，编写代码最简单。
+- **广度优先搜索（BFS）**：从 $s$ 出发按层辐射扩散。不仅能判断可达性，还能在无权图中**顺便求出 $s$ 到 $t$ 的最少步数路径**。
+- **时间复杂度**：$O(V + E)$；**空间复杂度**：$O(V)$。
+
+### 双向搜索（Bidirectional Search，性能优化）
+
+- 同时从起点 $s$ 向外进行 BFS/DFS，以及从终点 $t$ 沿反向边向外搜索。
+- 当两边的“已访问集合”出现**交集**时，说明 $s$ 与 $t$ 可达。
+- **优势**：搜索空间可从传统的 $O(b^d)$ 锐减至 $O(b^{d/2})$（其中 $b$ 为分支因子，$d$ 为最短路径深度），在海量节点图中性能提升显著。
+
+### 并查集（Disjoint Set Union, DSU，仅适用于无向图）
+
+- 将图中的边依次进行合并操作（`Union`），然后直接查询 $s$ 和 $t$ 的代表元素是否相同（`Find(s) == Find(t)`）。
+- **优势**：适合**动态图**场景（不断有新边加入的网格或网络），查询时间复杂度接近 $O(1)$。
+
+### 内存受限下的极小空间算法（理论突破）
+
+- **Savitch 定理 / 递归中点搜索**：在极度限制内存（如只能使用 $O(\log^2 V)$ 空间）的场景下，通过递归判断“是否存在中点 $m$ 使得 $s \to m$ 和 $m \to t$ 均可达”来求解。
+
+## 参考代码（双向 BFS）
+
+在实际工程中，双向 BFS 是判断 $s$-$t$ 可达性效率极高的方案：
+
+```c++
+#include <iostream>
+#include <vector>
+#include <unordered_set>
+#include <queue>
+
+using namespace std;
+
+// 双向 BFS 判断 s 到 t 是否可达 (有向图)
+bool isReachableBidirectional(int s, int t, const vector<vector<int>>& adj,
+                              const vector<vector<int>>& reverse_adj, int n) {
+    if (s == t) return true;
+
+    unordered_set<int> visited_forward = {s};
+    unordered_set<int> visited_backward = {t};
+
+    queue<int> q_forward;
+    queue<int> q_backward;
+
+    q_forward.push(s);
+    q_backward.push(t);
+
+    while (!q_forward.empty() && !q_backward.empty()) {
+        // 优先扩展较小的队列以优化搜索空间
+        if (q_forward.size() <= q_backward.size()) {
+            int curr = q_forward.front();
+            q_forward.pop();
+
+            for (int neighbor : adj[curr]) {
+                if (visited_backward.count(neighbor)) return true; // 两头碰撞，说明可达
+                if (!visited_forward.count(neighbor)) {
+                    visited_forward.insert(neighbor);
+                    q_forward.push(neighbor);
+                }
+            }
+        } else {
+            int curr = q_backward.front();
+            q_backward.pop();
+
+            for (int neighbor : reverse_adj[curr]) { // 沿反向边倒查
+                if (visited_forward.count(neighbor)) return true;
+                if (!visited_backward.count(neighbor)) {
+                    visited_backward.insert(neighbor);
+                    q_backward.push(neighbor);
+                }
+            }
+        }
+    }
+
+    return false; // 队列清空仍未碰撞，说明不可达
+}
+```
+
+## 应用领域与计算复杂性
+
+### 实际工程应用
+
+   - **网络访问控制（ACL）**：安全防火墙检测 IP 地址 $s$ 是否能够 ping 通服务器 $t$。
+   - **垃圾回收（GC）机制**：Java/Go 等语言中，GC 垃圾回收器的“可达性分析算法”就是判断对象 $t$ 是否从根节点（GC Roots）$s$ 可达；若不可达，则视为无用对象进行回收。
+   - **社交网络关系验证**：判断用户 $A$ 和用户 $B$ 是否处于同一个社交圈子或存在关系链。
+
+### 理论计算机科学
+
+   - 在复杂度理论中，无向图的 $s$-$t$ 可达性属于 **L 类（Logspace）** 问题，由 Omer Reingold 在 2005 年证明存在对数空间的确定性算法。
+   - 有向图的 $s$-$t$ 可达性（简称 **STCON**）则是 **NL 完全（NL-complete）** 问题的经典代表，是研究空间复杂度类的基石。

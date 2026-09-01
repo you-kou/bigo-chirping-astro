@@ -1,0 +1,123 @@
+---
+title: '二部图判断'
+description: '二部图判断即检验图能否把顶点划分成两个互不相交集合，使得每条边的两个端点分别属于不同集合，不存在同一集合内部的边；可通过 BFS 或 DFS 进行染色，若发现相邻顶点颜色相同则不是二部图，无冲突则为二部图。'
+pubDate: 1936-01-01
+tags: [图搜索]
+categories: [基础算法]
+heroImage: './bipartite-graph-cover.png'
+heroImageAlt: ''
+---
+
+import { Image } from 'astro:assets';
+import BipartiteGraphExampleImg from './bipartite-graph-example.webp';
+import ExplainedSolutionImg from './explained-solution.png';
+
+二部图判断（Bipartite Graph Check）旨在判断一个给定的图是否可以被划分成两个互不相交的顶点集合，使得图中的每一条边所连接的两个顶点分别属于这两个不同的集合。
+
+换句话说，就是判断能否用 **2 种颜色**给图的所有顶点染色，使得**任意一条边的两个端点颜色都不相同**。因此，二部图判断问题也常被称为**图的 2-染色问题（2-Coloring Problem）**。
+
+## 充要条件（核心定理）
+
+```alert
+type: success
+style: dash
+description: 一个图是二部图，当且仅当该图中不包含奇数长度的环（Odd Cycle）。
+```
+
+如果图中包含三角形（3 个顶点的环）或任意奇数个顶点构成的环，就绝对无法用 2 种颜色交替染色；反之，若无奇数环，则必定是二部图。
+
+<figure>
+  <Image src={BipartiteGraphExampleImg} alt="二分图与非二分图示例对比" widths={[400, 800, 1200]}/>
+  <figcaption>二分图与非二分图对比：二分图顶点分为两组，边只跨组连接；含奇数环则不是二分图。三角形、奇数环结构为非二分图；四边形、六边形为二分图，绿、灰区分两组顶点。</figcaption>
+</figure>
+
+## 核心解法：染色法（Coloring Algorithm）
+
+二部图判断的核心是尝试用两种颜色（`1` 与 `-1`）为节点交替染色（未染色记为 `0`）。通常采用 **BFS** 进行图的遍历：
+
+1. **外层遍历**：依次检查每个节点。若节点未染色，将其染为 `1` 并作为起点压入队列（确保覆盖非连通图）。
+2. **出队处理**：弹出队首节点 $u$，检查其所有邻居节点 $v$。
+3. **染色规则**：
+   - **未染色（`color[v] == 0`）**：染上相反颜色（`-color[u]`）并压入队列。
+   - **已染色（`color[v] != 0`）**：若颜色与当前节点相同（`color[v] == color[u]`），即触发**染色冲突（发现奇数环）**，立即返回 **非二部图**。
+4. **完成判断**：若所有节点处理完毕且无冲突，则该图**是二部图**。
+
+<figure>
+  <Image src={ExplainedSolutionImg} alt="基于 BFS 的二着色算法分步求解" widths={[400, 800, 1200]}/>
+  <figcaption>基于 BFS 的二着色算法分步求解：从起点开始，用队列遍历，给相邻结点分配相反颜色；共 8 步完整演示染色流程。若发现相邻结点颜色冲突，则图不是二分图；本例染色无冲突，可完成二着色。红色集合\{1,5,6\}，蓝色集合\{2,3,4\}。</figcaption>
+</figure>
+
+## 参考代码（基于 BFS）
+
+```c++
+#include <iostream>
+#include <vector>
+#include <queue>
+
+using namespace std;
+
+// 判断无向图是否为二部图
+bool isBipartite(const vector<vector<int>>& adj, int n) {
+    // 0: 未染色, 1: 颜色A, -1: 颜色B
+    vector<int> color(n, 0);
+
+    // 遍历所有节点，确保处理非连通图
+    for (int i = 0; i < n; ++i) {
+        if (color[i] != 0) continue; // 已染色的节点跳过
+
+        queue<int> q;
+        q.push(i);
+        color[i] = 1; // 起始节点染成颜色 1
+
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+
+            for (int v : adj[u]) {
+                if (color[v] == 0) {
+                    // 未染色：染成相反颜色并入队
+                    color[v] = -color[u];
+                    q.push(v);
+                } else if (color[v] == color[u]) {
+                    // 邻居与当前节点颜色相同，存在冲突
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true; // 成功完成 2-染色
+}
+
+int main() {
+    int n = 4;
+    vector<vector<int>> adj(n);
+
+    // 构建一个四元环：0-1, 1-2, 2-3, 3-0 (偶数环，是二部图)
+    adj[0] = {1, 3};
+    adj[1] = {0, 2};
+    adj[2] = {1, 3};
+    adj[3] = {2, 0};
+
+    if (isBipartite(adj, n)) {
+        cout << "该图是二部图！" << endl;
+    } else {
+        cout << "该图不是二部图！" << endl;
+    }
+
+    return 0;
+}
+```
+
+## 复杂度分析
+
+| **指标**       | **邻接表表示** | **说明**                                                     |
+| -------------- | -------------- | ------------------------------------------------------------ |
+| **时间复杂度** | $O(V + E)$     | 每个顶点和每条边最多被访问一次（$V$ 为顶点数，$E$ 为边数）。 |
+| **空间复杂度** | $O(V)$         | 需要额外的 `color` 数组以及 BFS 队列开销。                   |
+
+## 实际应用场景
+
+1. **匹配问题**：二部图是求解 **最大匹配（Maximum Matching，如匈牙利算法）** 和 **最佳匹配（KM 算法）** 的前提基础。例如：求职者与岗位的配对、学生与宿舍的分配。
+2. **冲突检测与分组**：判断网络或社交圈子中是否存在不兼容群体（比如将人员分为两组，确保每组内部没有直接对抗关系的两人）。
+3. **推荐系统（Bipartite Network）**：把“用户”和“商品”抽象为二部图的两侧顶点，根据交互边进行推荐计算。
