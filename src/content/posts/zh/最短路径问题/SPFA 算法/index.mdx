@@ -1,0 +1,104 @@
+---
+title: 'SPFA 算法'
+description: 'Bellman‑Ford 算法用于求解带负权边的单源最短路径，允许边权为负，通过对所有边执行 n‑1 轮松弛操作得到最短路径；再执行一轮松弛，若仍可更新距离，说明图中存在负权回路，时间复杂度 O (nm)，效率低于 Dijkstra，适合检测负权环。'
+pubDate: 1994-04-25
+tags: [图, 松弛, 队列]
+categories: [基础算法, 最短路径问题]
+heroImage: './spfa‑concept.png'
+heroImageAlt: ''
+---
+
+import { Image } from 'astro:assets';
+import StepByStepImg from './spfa‑algorithm‑step‑by‑step.png';
+
+**SPFA**（Shortest Path Faster Algorithm，最短路径快速算法）是 Bellman-Ford 算法的一种**先进先出（FIFO）队列优化版本**，由西南交通大学的段凡丁于 1994 年提出。
+
+Standard Bellman-Ford 在每一轮都会盲目遍历图中所有的边，而 SPFA 抓住了一个核心推论：**只有当一个节点 $u$ 的最短距离 $dist[u]$ 发生改变时，它的出边邻居 $v$ 的最短距离才可能被成功松弛。**
+
+## 核心机制与逻辑
+
+1. **队列维护**：维护一个先进先出的队列，专门存放“已经被更新了最短距离、但尚未尝试用它去更新邻居”的节点。
+2. **入队标记（`in_queue` 数组）**：为了避免节点重复入队造成不必要的重复计算，使用标记数组记录节点当前是否已在队列中。
+3. **入队次数统计（`cnt` 数组）**：记录每个节点被松弛入队的总次数。如果某个节点入队次数达到 $V$（顶点总数），说明图中存在**负权环**。
+
+<figure>
+  <Image src={StepByStepImg} alt="SPFA 分步演示" widths={[400, 800, 1200]} />
+  <figcaption>SPFA 算法：使用队列对 Bellman‑Ford 进行优化的单源最短路径算法，仅将被松弛成功的顶点加入队列，减少无效迭代；`dis`记录最短距离，`used`标记顶点是否在队列内，`queue`保存待松弛顶点。</figcaption>
+</figure>
+
+## 代码实现
+
+```c++
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <limits>
+
+struct Edge {
+    int to;
+    int weight;
+};
+
+bool spfa(int n, int src, const std::vector<std::vector<Edge>>& adj) {
+    const int INF = std::numeric_limits<int>::max();
+    std::vector<int> dist(n, INF);
+    std::vector<int> cnt(n, 0);         // 记录每个节点入队次数
+    std::vector<bool> in_queue(n, false); // 标记节点是否在队列中
+    std::queue<int> q;
+
+    // 初始化源点
+    dist[src] = 0;
+    q.push(src);
+    in_queue[src] = true;
+    cnt[src] = 1;
+
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        in_queue[u] = false; // 出队后重置标记
+
+        for (const auto& edge : adj[u]) {
+            int v = edge.to;
+            int w = edge.weight;
+
+            // 尝试对边 (u, v) 进行松弛操作
+            if (dist[u] != INF && dist[u] + w < dist[v]) {
+                dist[v] = dist[u] + w;
+
+                // 若 v 不在队列中，则将其加入队列
+                if (!in_queue[v]) {
+                    q.push(v);
+                    in_queue[v] = true;
+                    cnt[v]++;
+
+                    // 负权环检测：若某个顶点入队达到 n 次，说明存在负权环
+                    if (cnt[v] >= n) {
+                        std::cout << "错误：存在负权环！\n";
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+    // 输出最短距离
+    for (int i = 0; i < n; ++i) {
+        if (dist[i] == INF) std::cout << "顶点 " << i << " : 不可达\n";
+        else std::cout << "顶点 " << i << " : " << dist[i] << "\n";
+    }
+    return true;
+}
+```
+
+## 性能与特点
+
+**时间复杂度**：
+
+- **平均情况**：在稀疏图上的平均运行效率非常高，接近 $O(k \cdot E)$（其中 $k$ 是常数，通常 $k \le 2$）。
+- **最坏情况**：在网格图或被恶意构造的图（卡 SPFA 数据）中，复杂度会退化回普通 Bellman-Ford 的 $O(V \cdot E)$。
+
+**适用场景**：
+
+- 包含负权边的图。
+- 需要进行负权环检测时。
+- 在已知无负权边时，竞赛或生产环境中通常**优先推荐优先队列优化的 Dijkstra 算法**（复杂度稳定在 $O(E \log V)$）。

@@ -4,7 +4,6 @@ description: 'Dijkstra 算法是图论中经典的贪心算法，依托松弛操
 pubDate: 1959-12
 tags: [图, 贪心]
 categories: [基础算法, 最短路径问题]
-toc: true
 heroImage: './Edsger_Wybe_Dijkstra.png'
 heroImageAlt: 'ACM1972 年图灵奖海报，迪杰斯特拉黑白人像，配授奖评语：为将程序设计发展为高深智力领域作出奠基性贡献'
 ---
@@ -54,7 +53,11 @@ Dijkstra 算法生效的关键前提是：**图中所有边的权值必须非负
 - **理论逻辑**：算法基于贪心假设——当前从集合 $U$ 挑选出 $d[u]$ 最小的节点时，由于不存在负边权，后续不可能再通过更长的路径累加出更小的距离。
 - **失效场景**：若图中存在负权边，经由后续节点松弛后可能产生更小的累加距离，从而“颠覆”之前已确定的答案。
 
-> **提示**：若图中包含负权边，应改用 **Bellman-Ford 算法** 或 **SPFA 算法**。
+```alert
+type: warning
+style: dash
+description: 若图中包含负权边，应改用 Bellman-Ford 算法 或 SPFA 算法。
+```
 
 ## 算法实现与复杂度比较
 

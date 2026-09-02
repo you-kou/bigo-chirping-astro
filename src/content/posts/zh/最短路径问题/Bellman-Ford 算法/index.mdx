@@ -1,0 +1,171 @@
+---
+title: 'Bellman-Ford 算法'
+description: 'SPFA 是 Bellman‑Ford 的队列优化版本，用于求解带负权边的单源最短路径，只将被松弛成功的顶点入队，避免无效松弛；通过记录顶点入队次数，若某点入队超过顶点总数，即可判定存在负权回路，平均时间复杂度较低，最坏仍为 O (nm)。'
+pubDate: 1956-08-14
+tags: [图, 松弛]
+categories: [基础算法, 最短路径问题]
+heroImage: './bellman‑ford‑concept.jpg'
+heroImageAlt: ''
+---
+
+import { Image } from 'astro:assets';
+import StepByStepImg from './bellman‑ford‑algorithm‑step‑by‑step.png';
+
+Bellman-Ford 算法是一种用于在**加权有向图**中求解单源最短路径（Single-Source Shortest Path）的经典动态规划算法。由 Richard Bellman 和 Lester Ford Jr. 于 1950 年代分别提出。
+
+与 Dijkstra 算法不同，Bellman-Ford 的最大优势在于**能够处理包含负权边的图**，并且可以检测出图中是否存在**负权环**。
+
+```alert
+type: info
+style: dash
+description: 在图论中，负权环（Negative-Weight Cycle，也称负权回路）是指在一个加权图中，环路上所有边的权重之和小于零的闭合路径。
+```
+
+## 关键概念与原理
+
+### 为什么需要 Bellman-Ford？
+
+- **Dijkstra 算法的局限**：基于贪心策略，要求所有边的权重非负。一旦存在负权边，Dijkstra 提前锁定的“最短距离”可能会被后续的负权更新破坏，导致得出错误结果。
+- **负权环问题**：如果图中存在一个权值之和为负数的环路，绕着这个环走任意圈数，路径总长都会无限减小。这种情况下，源点到环上及环后续节点的最短路径是不存在的（负无穷）。Bellman-Ford 能够明确识别这种异常。
+
+### 松弛操作（Relaxation）
+
+算法的核心思想是对图中的边进行多次“松弛”。对于一条从 $u$ 到 $v$、权重为 $w$ 的有向边 $(u, v)$：
+
+$$\text{若 } dist[u] + w < dist[v]，\text{则更新 } dist[v] = dist[u] + w$$
+
+这代表：如果通过顶点 $u$ 到达顶点 $v$ 的路径比当前已知到达 $v$ 的路径更短，就更新到达 $v$ 的最短路径。
+
+### 算法的核心推论
+
+在一个包含 $V$ 个顶点的图中，任意一条**不含环路**的简单最短路径，最多只能包含 $V - 1$ 条边。基于此推论，算法的核心逻辑可以浓缩为两个阶段：
+
+- **求解路径（前 $V - 1$ 轮）：** 每一轮遍历所有边进行“松弛”，相当于将最短路径的长度上限加 1。执行 $V - 1$ 轮后，所有合法节点的最短路径必然已全部确定。
+- **检测异常（第 $V$ 轮）：** 既然合法的最短路径最多只有 $V - 1$ 条边，若在第 $V$ 轮遍历时仍有节点距离能被更新，则说明图中必然存在**负权环**。
+
+## 算法实现
+
+### 算法流程
+
+1. **设置初始距离：** 初始化估计值（Overestimate）。
+
+    将源点（起点）的距离初始化为 0，图中所有其他顶点的距离初始化为无穷大（$\infty$）。
+
+    - $dist[S] = 0$
+    - $dist[V] = \infty \quad (\text{对所有非源点 } V)$
+
+2. **第一轮松弛：** 最多包含 1 条边的路径。
+
+    遍历图中的每条边 $(U, V)$。检查通过顶点 $U$ 到达顶点 $V$ 是否能得到更短的路径：
+
+    $$\text{若 } dist[U] + weight(U, V) < dist[V]，\text{则更新 } dist[V] = dist[U] + weight(U, V)$$
+
+3. **第二轮松弛：** 最多包含 2 条边的路径。
+
+    对图中的所有边再次执行相同的松弛操作，以找出最多包含 2 条边的更短路径。
+
+4. **重复松弛至 V-1 轮：** 最多包含 V-1 条边的路径。
+
+    不断对所有边重复执行松弛操作，直到完成 $V - 1$ 轮（其中 $V$ 为顶点总数）。由于不含环路的简单最短路径最多只包含 $V - 1$ 条边，此时所有节点的最短路径已确保最优化。
+
+5. **检测负权环：** 第 V 轮检查。
+
+    对所有边再额外进行第 $V$ 轮松弛检查。如果仍有任何距离可以继续减小（满足 $dist[U] + weight(U, V) < dist[V]$），则说明图中存在**负权环**。
+
+6. **输出最终结果：** 算法结束。
+
+    若未检测到负权环，算法终止并返回从源点到图中所有其他顶点的最终最短路径距离。
+
+<figure>
+  <Image src={StepByStepImg} alt="Bellman‑Ford 分步演示" widths={[400, 800, 1200]} />
+  <figcaption>Bellman‑Ford 算法：支持负权边的单源最短路径算法，迭代更新距离数组`dis`与前驱数组`pre`，通过 pre 数组回溯还原完整最短路径。</figcaption>
+</figure>
+
+### 代码实现
+
+```c++
+#include <iostream>
+#include <vector>
+#include <limits>
+
+// 定义边的结构体
+struct Edge {
+    int u;      // 起点
+    int v;      // 终点
+    int weight; // 边权
+};
+
+/**
+ * Bellman-Ford 算法求解单源最短路径
+ * @param vertices 顶点数量
+ * @param edges 图中所有的边
+ * @param src 源点
+ */
+bool bellmanFord(int vertices, const std::vector<Edge>& edges, int src) {
+    const int INF = std::numeric_limits<int>::max();
+    std::vector<int> dist(vertices, INF);
+    dist[src] = 0;
+
+    // 1. 执行 V - 1 轮松弛操作
+    for (int i = 0; i < vertices - 1; ++i) {
+        bool updated = false;
+        for (const auto& edge : edges) {
+            // 防止 INF + weight 导致整数溢出
+            if (dist[edge.u] != INF && dist[edge.u] + edge.weight < dist[edge.v]) {
+                dist[edge.v] = dist[edge.u] + edge.weight;
+                updated = true;
+            }
+        }
+        // 剪枝优化：若本轮没有任何更新，提前结束
+        if (!updated) break;
+    }
+
+    // 2. 第 V 轮检测负权环
+    for (const auto& edge : edges) {
+        if (dist[edge.u] != INF && dist[edge.u] + edge.weight < dist[edge.v]) {
+            std::cout << "错误：图中存在从源点可达的负权环！\n";
+            return false;
+        }
+    }
+
+    // 3. 输出最短路径结果
+    std::cout << "顶点 " << src << " 到各个顶点的最短距离：\n";
+    for (int i = 0; i < vertices; ++i) {
+        if (dist[i] == INF) {
+            std::cout << "到顶点 " << i << " : 不可达\n";
+        } else {
+            std::cout << "到顶点 " << i << " : " << dist[i] << "\n";
+        }
+    }
+    return true;
+}
+
+int main() {
+    int vertices = 5;
+
+    // 构造测试图（5个顶点，8条边）
+    std::vector<Edge> edges = {
+        {0, 1, -1},
+        {0, 2, 4},
+        {1, 2, 3},
+        {1, 3, 2},
+        {1, 4, 2},
+        {3, 2, 5},
+        {3, 1, 1},
+        {4, 3, -3}
+    };
+
+    bellmanFord(vertices, edges, 0);
+
+    return 0;
+}
+```
+
+## 常见优化方案：SPFA 算法
+
+标准的 Bellman-Ford 算法在每一轮都会盲目遍历**所有**的边，很多时候其中大量节点的距离并未改变。
+
+**SPFA（Shortest Path Faster Algorithm）** 是对 Bellman-Ford 的经典优化：
+
+- **核心机制**：使用一个队列（FIFO Queue）来维护可能需要松弛的节点。只有当顶点 $u$ 的最短距离更新时，才将 $u$ 邻接到的顶点 $v$ 加入队列。
+- **效率提升**：在稀疏图上的平均运行效率可大幅提升至 $O(E)$；但在特殊构造的极恶劣数据（如网格图）下，时间复杂度仍会退化为标准的 $O(V \cdot E)$。
