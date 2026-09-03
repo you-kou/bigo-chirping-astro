@@ -8,18 +8,8 @@ heroImage: './prim-algorithm.jpg'
 heroImageAlt: ''
 ---
 
-import Callout from '../../../../../components/Callout.astro';
 import { Image } from 'astro:assets';
 import PrimDecisionFlowImg from './prim-decision-flow.png';
-
-<Callout type="info" title="问题定义">
-  给定一个**连通的无向带权图**：
-
-  - **生成树（Spanning Tree）**：包含图中所有 $n$ 个顶点，且用最少 $n-1$ 条边连接起来的**无环子图**。
-  - **最小生成树（MST）**：在所有可能的生成树中，**所有边权值之和最小**的那棵生成树。
-
-  **核心特征**：如果图中有 $n$ 个节点，其最小生成树必定恰好包含 $n-1$ 条边。如果图的边权存在重复，最小生成树可能不唯一；但若所有边权均互不相同，则最小生成树是唯一的。
-</Callout>
 
 **Prim 算法**（普里姆算法）是求解最小生成树（MST）的另一种经典贪心算法，由捷克数学家 Vojtěch Jarník 于 1930 年首次提出，后由美国计算机科学家 Robert Prim 于 1957 年独立重新发现。
 

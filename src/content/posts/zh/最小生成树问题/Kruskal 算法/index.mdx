@@ -8,18 +8,8 @@ heroImage: './kruskal-s-algorithm.webp'
 heroImageAlt: ''
 ---
 
-import Callout from '../../../../../components/Callout.astro';
 import { Image } from 'astro:assets';
 import KruskalDecisionFlowImg from './kruskal-decision-flow.png';
-
-<Callout type="info" title="问题定义">
-给定一个**连通的无向带权图**：
-
-- **生成树（Spanning Tree）**：包含图中所有 $n$ 个顶点，且用最少 $n-1$ 条边连接起来的**无环子图**。
-- **最小生成树（MST）**：在所有可能的生成树中，**所有边权值之和最小**的那棵生成树。
-
-**核心特征**：如果图中有 $n$ 个节点，其最小生成树必定恰好包含 $n-1$ 条边。如果图的边权存在重复，最小生成树可能不唯一；但若所有边权均互不相同，则最小生成树是唯一的。
-</Callout>
 
 **Kruskal 算法**（克鲁斯卡尔算法）是求解最小生成树（MST）最直观、最常用的贪心算法之一，由 Joseph Kruskal 于 1956 年提出。
 
