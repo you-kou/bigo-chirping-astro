@@ -1,0 +1,137 @@
+---
+title: 'Prim 算法'
+description: 'Prim 是求解最小生成树的算法，从任意顶点出发维护一个已选顶点集合，每次选取连接集合内外、权值最小的边，将对应顶点并入集合，直到包含全部顶点；朴素实现 O(n^2) 适合稠密图，堆优化版本 O(mlog n) 适合稀疏图，支持负权边。'
+pubDate: 1957-11
+tags: [树, 贪心]
+categories: [基础算法, 最小生成树问题]
+heroImage: './prim-algorithm.jpg'
+heroImageAlt: ''
+---
+
+import Callout from '../../../../../components/Callout.astro';
+import { Image } from 'astro:assets';
+import PrimDecisionFlowImg from './prim-decision-flow.png';
+
+<Callout type="info" title="问题定义">
+  给定一个**连通的无向带权图**：
+
+  - **生成树（Spanning Tree）**：包含图中所有 $n$ 个顶点，且用最少 $n-1$ 条边连接起来的**无环子图**。
+  - **最小生成树（MST）**：在所有可能的生成树中，**所有边权值之和最小**的那棵生成树。
+
+  **核心特征**：如果图中有 $n$ 个节点，其最小生成树必定恰好包含 $n-1$ 条边。如果图的边权存在重复，最小生成树可能不唯一；但若所有边权均互不相同，则最小生成树是唯一的。
+</Callout>
+
+**Prim 算法**（普里姆算法）是求解最小生成树（MST）的另一种经典贪心算法，由捷克数学家 Vojtěch Jarník 于 1930 年首次提出，后由美国计算机科学家 Robert Prim 于 1957 年独立重新发现。
+
+与 Kruskal 算法“按边全局排序加边”不同，Prim 算法的核心思想是 **“加点法”**（或称“生长法”）：从某一个起始顶点开始，像一棵树一样向外“生长”，每次寻找**已选顶点集合**与**未选顶点集合**之间权值最小的边，将新顶点拉入树中，直到覆盖所有顶点。
+
+## 核心原理与步骤
+
+假设图包含 $V$ 个顶点和 $E$ 条边：
+
+1. **集合划分**：
+
+   *维护两个顶点集合*：
+
+   - $S$：已经加入生成树的顶点集合（初始时仅包含一个指定的起点 $u_0$）。
+   - $V - S$：尚未加入生成树的顶点集合。
+
+2. **割边选择（割定理）**：
+
+   找到连接 $S$ 与 $V - S$ 的所有边中**权值最小的一条边** $(u, v)$，其中 $u \in S$ 且 $v \in (V - S)$。
+
+3. **扩张更新**：
+
+   - 将边 $(u, v)$ 加入生成树。
+   - 将顶点 $v$ 从 $V - S$ 移入 $S$。
+   - 更新新加入点 $v$ 到剩余未选顶点的最小距离。
+
+4. **终止条件**：当 $S$ 包含了图中所有的顶点（即大小达到 $V$）时，算法结束。
+
+<figure>
+  <Image src={PrimDecisionFlowImg} alt="Prim 算法构造最小生成树流程" widths={[400, 800, 1200]} />
+  <figcaption>核心思路：以点为核心扩展 MST，维护已选中顶点集合，每次挑选集合向外的最短边，逐步把全部顶点纳入生成树。</figcaption>
+</figure>
+
+## 参考代码（优先队列/最小堆优化）
+
+在朴素实现中，每次查找跨集合最小边需要遍历所有邻接点，时间复杂度为 $O(V^2)$。采用最小堆（优先队列）维护“割边”，可以将时间复杂度优化至 $O(E \log V)$：
+
+```c++
+#include <iostream>
+#include <vector>
+#include <queue>
+
+using namespace std;
+
+// 邻接表节点结构：{目标顶点, 边权值}
+typedef pair<int, int> pii;
+
+void prim(int n, const vector<vector<pii>>& adj, int start = 1) {
+    // 标记节点是否已加入树中 (即集合 S)
+    vector<bool> in_MST(n + 1, false);
+
+    // 存储节点到已选集合 S 的最小距离，初始化为无穷大
+    vector<int> min_dist(n + 1, 1e9);
+
+    // 优先队列存 {距离/权值, 顶点}，小顶堆
+    priority_queue<pii, vector<pii>, greater<pii>> pq;
+
+    int mst_weight = 0;
+    int nodes_added = 0;
+
+    // 起点初始化
+    min_dist[start] = 0;
+    pq.push({0, start});
+
+    while (!pq.empty() && nodes_added < n) {
+        auto [w, u] = pq.top();
+        pq.pop();
+
+        // 如果节点 u 已经在 MST 中，忽略跳过
+        if (in_MST[u]) continue;
+
+        // 将节点 u 纳入 MST 集合 S
+        in_MST[u] = true;
+        mst_weight += w;
+        nodes_added++;
+
+        // 遍历 u 的所有邻接节点，更新它们到集合 S 的最短距离
+        for (const auto& edge : adj[u]) {
+            int v = edge.first;
+            int weight = edge.second;
+
+            // 如果 v 不在 MST 中且通过 u 连接的权值更小
+            if (!in_MST[v] && weight < min_dist[v]) {
+                min_dist[v] = weight;
+                pq.push({min_dist[v], v});
+            }
+        }
+    }
+
+    if (nodes_added == n) {
+        cout << "最小生成树总权值: " << mst_weight << endl;
+    } else {
+        cout << "图不连通，无法构成最小生成树！" << endl;
+    }
+}
+```
+
+## 复杂度分析与性能
+
+根据实现方式的不同，Prim 算法的时间复杂度有明显差异：
+
+| **实现方式**                   | **时间复杂度**    | **适用场景**                      |
+| ------------------------------ | ----------------- | --------------------------------- |
+| **邻接矩阵 + 朴素查找**        | $O(V^2)$          | **稠密图**（$E \approx V^2$）最佳 |
+| **邻接表 + 二叉堆 (优先队列)** | $O(E \log V)$     | **稀疏图** / 通用场合             |
+| **邻接表 + 斐波那契堆**        | $O(E + V \log V)$ | 理论最优解                        |
+
+## Prim 算法 vs Kruskal 算法对比
+
+| **维度**         | **Prim 算法**                  | **Kruskal 算法**               |
+| ---------------- | ------------------------------ | ------------------------------ |
+| **增长模式**     | 维护**单棵树**，逐步扩张加入点 | 维护**森林**，逐步合并连通分量 |
+| **关键操作**     | 查找集合边界上的最小边         | 边权全局排序 + 并查集判环      |
+| **空间复杂度**   | $O(V + E)$（存储图和队列）     | $O(V + E)$（存储边和并查集）   |
+| **最适用图结构** | **稠密图**（边较多时效率高）   | **稀疏图**（边较少时效率高）   |
