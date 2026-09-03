@@ -1,0 +1,332 @@
+---
+title: 最小生成树
+description: '给定一张带权连通无向图，存在重边，对每条输入边，求单独删掉该边后剩余图的最小生成树权值，若删后图不连通则输出‑1，各次删边相互独立，数据规模可达十万级别。'
+pubDate: 2025-09-30
+tags: [最小生成树]
+categories: [GESP]
+heroImage: './cover.png'
+heroImageAlt: ''
+---
+
+import Callout from '../../../../../components/Callout.astro';
+
+<Callout type="info" title="题目描述">
+给定一张包含 $n$ 个结点 $m$ 条边的**带权连通无向图**，结点依次以 $1,2,\ldots,n$ 编号，第 $i$ 条边（$1\le i\le m$）连接结点 $u_i$ 与结点 $v_i$，边权为 $w_i$。
+
+对于每条边，请你求出从图中移除该条边后，图的最小生成树中所有边的边权和。特别地，若移除某条边后图的最小生成树不存在，则输出 $-1$。
+
+**输入格式**
+
+第一行，两个正整数 $n,m$，分别表示图的结点数与边数。
+
+接下来 $m$ 行中的第 $i$ 行（$1\le i\le m$）包含三个正整数 $u_i,v_i,w_i$，表示图中连接结点 $u_i$ 与结点 $v_i$ 的边，边权为 $w_i$。
+
+**输出格式**
+
+输出共 $m$ 行，第 $i$ 行（$1\le i\le m$）包含一个整数，表示移除第 $i$ 条边后，图的最小生成树中所有边的边权和。若移除第 $i$ 条边后图的最小生成树不存在，则输出 $−1$。
+
+**样例**
+
+**输入样例 1**
+
+```
+5 5
+1 2 4
+2 3 3
+3 4 1
+2 5 2
+3 1 8
+```
+
+**输出样例 1**
+
+```
+14
+15
+-1
+-1
+10
+```
+
+**输入样例 2**
+
+```
+6 10
+1 2 6
+2 3 3
+3 1 4
+3 4 5
+4 5 8
+5 6 2
+6 4 1
+3 2 4
+5 4 4
+3 3 6
+```
+
+**输出样例 2**
+
+```
+15
+16
+17
+-1
+15
+17
+18
+15
+15
+15
+```
+
+**数据范围**
+
+| 子任务编号 | 测试点占比 |    $n$     |        $m$         | 特殊性质 |
+| :--------: | :--------: | :--------: | :----------------: | :------: |
+|     1      |   $20\%$   |  $\le 50$  |     $\le 100$      |    -     |
+|     2      |   $30\%$   | $\le 10^5$ |     $\le 10^5$     |  $n=m$   |
+|     3      |   $30\%$   | $\le 500$  | $\le 2\times 10^4$ |    -     |
+|     4      |   $20\%$   | $\le 10^5$ |     $\le 10^5$     |    -     |
+
+对于所有测试点，保证 $1\le n\le 10^5$，$1\le m\le 10^5$，$1\le u_i,v_i\le n$，$1\le w_i\le 10^9$。
+</Callout>
+
+## 核心逻辑
+
+删除任意一条边 $e = (u, v, w)$ 时，按其是否在原图的最小生成树（MST）中分类讨论：
+
+- 当 $e$ **不在**原图的 MST 中（即 $e$ 为**非树边**）时，移除 $e$ 不会破坏原图 MST 的结构与连通性，答案为**直接输出原图 MST 的权值和 $S$**。
+
+
+- 当 $e$ **在**原图的 MST 中（即 $e$ 为**树边**）时，移除 $e$ 会将原来的 MST 割成两棵独立的子树 $T_1$ 与 $T_2$。
+
+  此时只需在**非树边**中找到一条跨越 $T_1$ 和 $T_2$ 且**权值最小**的替换边 $e' = (u', v', w')$ 重新连通两树。若**找到替换边** $e'$，答案为 **$S - w + w'$**；若**找不到替换边** $e'$，说明 $e$ 是原图的**割边（桥）**，删去后图不连通，输出 **`-1`**。
+
+```alert
+type: info
+style: dash
+description: 在图论中，割边（Cut Edge），也常被称为桥（Bridge），是指删除后会导致图的连通分量数量增加的边。简单来说：对于一个连通图，如果删除了某条边，整个图就会被分割成两个互相不连通的部分，那么这条边就是割边。
+```
+
+## 如何高效寻找最佳替换边？
+
+- **问题转化**：对于任意一条非树边 $e' = (u', v', w')$，它与 MST 上连接 $u'$ 和 $v'$ 的纯树边路径 $P(u', v')$ 刚好构成一个环。因此，**路径 $P(u', v')$ 上的所有树边，都可以被非树边 $e'$ 覆盖并替换**。
+- **最优选择**：对于某条树边 $e$，可能存在多条非树边能覆盖它。我们要寻找的是**所有覆盖树边 $e$ 的非树边中，权值 $w'$ 最小的那一条**。
+
+<Callout type="info" title="直观理解">
+
+假设原图的最小生成树（MST）上有一条简单路径，连接节点 $u$ 和 $v$：
+
+1. **非树边 $e' = (u, v)$**：它的两个端点分别是 $u$ 和 $v$。
+2. **树上路径 $P(u, v)$**：树上 $u$ 到 $v$ 之间经过的所有树边的集合。
+
+此时，我们就称非树边 $e'$ **“覆盖”** 了路径 $P(u, v)$ 上的所有树边。
+
+</Callout>
+
+## 算法流程
+
+### 构建原图 MST
+
+使用 **[Kruskal 算法](/posts/%E6%9C%80%E5%B0%8F%E7%94%9F%E6%88%90%E6%A0%91%E9%97%AE%E9%A2%98/kruskal-%E7%AE%97%E6%B3%95/)** 求出原图 MST，记录总权值 $S$，并标记每条边是“树边”还是“非树边”。
+
+### 使用并查集进行树上路径覆盖（逆向缩点）
+
+1. 将所有**非树边**按权值从小到大排序。
+2. 遍历每一条非树边 $e' = (u', v', w')$，沿着树上路径从 $u'$ 和 $v'$ 向上跳至它们的最近公共祖先（LCA）。
+3. 沿途遇到的**未被覆盖过**的树边，其最小替换边权值直接标记为 $w'$（因为非树边已按权值升序排列，**首次覆盖即为最小值**）。
+4. 使用并查集维护节点跳转，覆盖一条树边后立即将该节点合并至其父节点，确保**每条树边仅被访问一次**。
+
+### 直接查询并输出
+
+遍历输入的 $m$ 条边：
+- **非树边** $\to$ 输出 $S$；
+- **树边** $\to$ 若无替换边（仍为初始标记）输出 `-1`，否则输出 $S - w + w'$。
+
+## 参考代码
+
+```c++
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+// 边的结构体定义
+struct Edge {
+    int u, v, id;
+    long long w;
+    bool is_mst; // 是否属于原图的 MST
+};
+
+// 用于求 MST 的并查集
+struct DSU {
+    vector<int> parent;
+    DSU(int n) : parent(n + 1) {
+        for (int i = 1; i <= n; ++i) parent[i] = i;
+    }
+    int find(int i) {
+        if (parent[i] == i) return i;
+        return parent[i] = find(parent[i]);
+    }
+    bool unite(int i, int j) {
+        int root_i = find(i);
+        int root_j = find(j);
+        if (root_i != root_j) {
+            parent[root_i] = root_j;
+            return true;
+        }
+        return false;
+    }
+};
+
+// 用于树上路径覆盖（并查集优化跳深度）
+struct TreeDSU {
+    vector<int> parent;
+    TreeDSU(int n) : parent(n + 1) {
+        for (int i = 1; i <= n; ++i) parent[i] = i;
+    }
+    int find(int i) {
+        if (parent[i] == i) return i;
+        return parent[i] = find(parent[i]);
+    }
+};
+
+struct TreeEdge {
+    int to;
+    int edge_idx; // 树边对应的原输入边序号
+};
+
+const int MAXN = 100005;
+vector<Edge> edges;
+vector<TreeEdge> adj[MAXN];
+int depth[MAXN];
+int parent_node[MAXN];
+int parent_edge_idx[MAXN]; // 节点 u 与其父节点（parent_node[u]）相连的那条树边在原图（edges 数组）中的编号（索引）
+long long min_replace_w[MAXN]; // 每条树边对应的最小替换非树边边权
+
+// DFS 构建 MST 树结构，确定节点深度与父子关系
+void dfs(int u, int p, int d, int edge_idx) {
+    depth[u] = d;
+    parent_node[u] = p;
+    parent_edge_idx[u] = edge_idx;
+    for (auto& edge : adj[u]) {
+        if (edge.to != p) {
+            dfs(edge.to, u, d + 1, edge.edge_idx);
+        }
+    }
+}
+
+int main() {
+    // 加速 I/O
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    int n, m;
+    if (!(cin >> n >> m)) return 0;
+
+    edges.resize(m);
+    for (int i = 0; i < m; ++i) {
+        cin >> edges[i].u >> edges[i].v >> edges[i].w;
+        edges[i].id = i;
+        edges[i].is_mst = false;
+        min_replace_w[i] = -1; // 默认初始化为 -1（无替换边）
+    }
+
+    // 1. Kruskal 求最小生成树
+    vector<Edge> sorted_edges = edges;
+    sort(sorted_edges.begin(), sorted_edges.end(), [](const Edge& a, const Edge& b) {
+        return a.w < b.w;
+    });
+
+    DSU dsu(n);
+    long long total_mst_weight = 0;
+    int mst_edge_count = 0;
+
+    for (auto& e : sorted_edges) {
+        if (dsu.unite(e.u, e.v)) {
+            edges[e.id].is_mst = true;
+            total_mst_weight += e.w;
+            mst_edge_count++;
+            adj[e.u].push_back({e.v, e.id});
+            adj[e.v].push_back({e.u, e.id});
+        }
+    }
+
+    // 2. DFS 预处理树的层级结构
+    dfs(1, 0, 1, -1);
+
+    // 3. 非树边按权值从小到大排序，使用并查集实现树上路径的极小值覆盖
+    TreeDSU tree_dsu(n);
+    for (auto& e : sorted_edges) {
+        if (edges[e.id].is_mst) continue; // 只处理非树边
+
+        int u = tree_dsu.find(e.u);
+        int v = tree_dsu.find(e.v);
+
+        // 向上跳直至 LCA，覆盖沿途未被覆盖过的树边
+        while (u != v) {
+            if (depth[u] < depth[v]) swap(u, v);
+
+            // u 节点的父边未被替换过，此时标记最小替换边权
+            int edge_id = parent_edge_idx[u];
+            min_replace_w[edge_id] = e.w;
+
+            // 并查集将 u 合并到 parent_node[u]，防止重复访问
+            int p = tree_dsu.find(parent_node[u]);
+            tree_dsu.parent[u] = p;
+            u = p;
+        }
+    }
+
+    // 4. 计算并输出每条边被删除后的结果
+    for (int i = 0; i < m; ++i) {
+        if (!edges[i].is_mst) {
+            // 情况 1: 删掉的边不在 MST 中，答案直接为原 MST 权值和
+            cout << total_mst_weight << "\n";
+        } else {
+            // 情况 2: 删掉的边在 MST 中
+            if (min_replace_w[i] == -1) {
+                // 找不到替换边，说明删边后图不连通
+                cout << -1 << "\n";
+            } else {
+                // 答案为：原 MST 总权值 - 当前树边权值 + 替换边权值
+                cout << total_mst_weight - edges[i].w + min_replace_w[i] << "\n";
+            }
+        }
+    }
+
+    return 0;
+}
+```
+
+### 如何保证只覆盖未被覆盖过的树边？
+
+为了避免重复覆盖并保证时间复杂度，代码利用了**非树边按权值升序排列**的前提，结合**并查集（DSU）的路径压缩**机制，实现了对已被覆盖树边的“秒跳”跳过。
+
+1. #### 并查集含义的转化
+
+    在 `TreeDSU` 中，`tree_dsu.find(u)` 的返回值不再仅仅代表集合根节点，而是代表 **“从节点 $u$ 开始向上走，遇到的第一个父边未被覆盖的祖先节点”**。
+
+2. #### 覆盖后的“缩点”合并
+
+    当节点 $u$ 的父边被成功覆盖后，代码会立即将 $u$ 在并查集中的父节点指向其树上父节点的代表元：
+
+    ```c++
+    int p = tree_dsu.find(parent_node[u]);
+    tree_dsu.parent[u] = p; // 将 u 指向更上层父边未覆盖的祖先
+    u = p;
+    ```
+
+    这一步操作相当于在逻辑上将已经被覆盖的树边“缩点”，直接屏蔽掉该条边的重复访问。
+
+3. #### 极速跳转实现“零重复”
+
+    在处理每条非树边前及向上跳跃的过程中，代码均先调用 `tree_dsu.find()`：
+
+    ```c++
+    int u = tree_dsu.find(e.u);
+    int v = tree_dsu.find(e.v);
+    ```
+
+    如果 $u$ 到 LCA 之间的某些树边在之前已经被其他非树边覆盖过，`find(u)` 会通过路径压缩，**瞬间将 $u$ 提升（跳转）到沿途第一个“父边未被覆盖”的祖先节点**，直接越过所有已被覆盖的树边。
